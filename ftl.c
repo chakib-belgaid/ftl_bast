@@ -46,7 +46,7 @@ static UINT32 g_scan_list_entries[NUM_BANKS];
 void ftl_open(void)
 {
 	sanity_check();
-
+	showlogs();
 	// STEP 1 - read scan lists from NAND flash
 
 	scan_list_t* scan_list = (scan_list_t*) SCAN_LIST_ADDR;
@@ -701,7 +701,9 @@ void showlogs()
 {
 	uart_printf("-----------logs--------------");
 	uart_printf("NUM_BANKS: %d",NUM_BANKS);
+	uart_printf("PAGES PER_BLK: %d",PAGES_PER_BLK);
+	uart_printf("total pages: %d , data pages %d",NUM_LPAGES ,NUM_DATA_BLKS *PAGES_PER_BLK);
 	uart_printf("NUM_DATA_BLKS: %d",NUM_DATA_BLKS);
-	uart_printf("NUM_LOG_BLKs: %d" , NUM_LOG_BLKS)
+	uart_printf("NUM_LOG_BLKs: %d" , NUM_LOG_BLKS);
 
 }
