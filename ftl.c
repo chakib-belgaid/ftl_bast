@@ -15,28 +15,23 @@
 // You should have received a copy of the GNU General Public License
 // along with Jasmine. See the file COPYING.
 // If not, see <http://www.gnu.org/licenses/>.
-//test
+
 
 #include "jasmine.h"
 
 static void sanity_check(void);
 static BOOL32 is_bad_block(UINT32 const bank, UINT32 const vblk_offset);
+static UINT32 get_physical_address(UINT32 const lpage_addr);
+static void update_physical_address(UINT32 const lpage_addr, UINT32 const new_bank, UINT32 const new_row);
+static UINT32 get_free_page(UINT32 const bank);
 static BOOL32 check_format_mark(void);
 static void write_format_mark(void);
 static void format(void);
 
-/*************** mes fonctions ****************/
-static UINT32 get_physical_address(UINT32 const lblk_addr);
-static BOOL32 check_if_in_log_block(UINT32const lblk_addr);
-static UINT32 get_log_address(UINT32 const lblk_addr);
-static void update_physical_address(UINT32 const lblk_addr,UINT32 const new_addr);
-static void update_log_address(UINT32 const new_blk );
-
-static UINT32 get_free_blk(UINT32 const bank);
-
-
 UINT32 g_ftl_read_buf_id;
 UINT32 g_ftl_write_buf_id;
+static UINT32 g_target_row[NUM_BANKS];
+static UINT32 g_target_bank;
 
 static volatile UINT32 g_read_fail_count;
 static volatile UINT32 g_program_fail_count;
@@ -142,8 +137,8 @@ void ftl_open(void)
 
 	// STEP 2 - If necessary, do low-level format
 	// format() should be called after loading scan lists, because format() calls is_bad_block().
-	if(TRUE )
-	//if (check_format_mark() == FALSE)
+
+	if (check_format_mark() == FALSE)
 	{
 		// When ftl_open() is called for the first time (i.e. the SSD is powered up the first time)
 		// format() is called.
@@ -154,8 +149,8 @@ void ftl_open(void)
 	// STEP 3 - initialize page mapping table
 	// The page mapping table is too large to fit in SRAM.
 
-	mem_set_dram(BLK_MAP_ADDR, NULL, BLK_MAP_BYTES);
-	mem_set_dram(LOG_MAP_ADDR,NULL,LOG_MAP_BYTES);
+	mem_set_dram(PAGE_MAP_ADDR, NULL, PAGE_MAP_BYTES);
+
 	// STEP 4 - initialize global variables that belong to FTL
 
 	g_ftl_read_buf_id = 0;
@@ -176,9 +171,6 @@ void ftl_open(void)
 
 	enable_irq();
 }
-
-
-
 
 void ftl_read(UINT32 const lba, UINT32 const total_sectors)
 {
@@ -449,10 +441,10 @@ static BOOL32 is_bad_block(UINT32 const bank, UINT32 const vblk_offset)
 #endif
 }
 
-static UINT32 get_physical_address(UINT32 const lblk_addr)
+static UINT32 get_physical_address(UINT32 const lpage_addr)
 {
 	// Page mapping table entry size is 4 byte.
-	return read_dram_32(BLK_MAP_ADDR + lblk_addr * sizeof(UINT32));
+	return read_dram_32(PAGE_MAP_ADDR + lpage_addr * sizeof(UINT32));
 }
 
 static void update_physical_address(UINT32 const lpage_addr, UINT32 const new_bank, UINT32 const new_row)
@@ -697,4 +689,15 @@ static void sanity_check(void)
 	{
 		while (1);
 	}
+}
+
+
+/*********************log fcts**************/
+void showlogs()
+{
+	uart_printf("-----------logs--------------");
+	uart_printf("NUM_BANKS: %d",NUM_BANKS);
+	uart_printf("NUM_DATA_BLKS: %d",NUM_DATA_BLKS);
+	uart_printf("NUM_LOG_BLKs: %d" , NUM_LOG_BLKS)
+
 }
