@@ -19,6 +19,10 @@
 
 #include "jasmine.h"
 
+#define PAGE_MAP_ADDR BLK_MAP_ADDR
+#define PAGE_MAP_BYTES BLK_MAP_BYTES
+
+
 static void sanity_check(void);
 static BOOL32 is_bad_block(UINT32 const bank, UINT32 const vblk_offset);
 static UINT32 get_physical_address(UINT32 const lpage_addr);
