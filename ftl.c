@@ -68,7 +68,11 @@ static UINT32 log_offset ;
 void showlogs();
 static int is_in_log(UINT32 const lpage_addr);  //  < 0 if it doesent' exist
 static physical_addr get_physical_data_addr(UINT32 const lpage_addr);
+static void set_physical_data_addr(UINT32 const lpage_addr ,UINT32 const p_blk);
 static BOOL32 check_if_exist(UINT32 lpage_addr);
+static UINT32 get_new_blk();
+static physical_addr get_new_log_page();
+static void write_page(UINT32 const lpn, UINT32 const sect_offset, UINT32 const num_sectors);
 
 //***************************************************************//
 
@@ -93,7 +97,7 @@ static physical_addr get_physical_data_addr(UINT32 const lpage_addr)
 
 	if ( offset >= 0 ) // the page exist in log blocks
 	{   int blk = offset / PAGES_PER_BLK ;
-		p_addr.page = offset;
+		p_addr.page = offset % PAGES_PER_BLK;
 		p_addr.blk  = read_dram_32(LOG_BLKS_MAP_ADDR+sizeof(UINT32) * blk);
 	}
 	else // the page exist in data block
@@ -107,6 +111,12 @@ static physical_addr get_physical_data_addr(UINT32 const lpage_addr)
 	return p_addr;
 }
 
+static void set_physical_data_addr(UINT32 const lpage_addr ,UINT32 const p_blk)
+{
+	UINT32 l_blk = lpage_addr / PAGES_PER_BLK ;
+	write_dram_32(BLK_MAP_ADDR + sizeof(UINT32)*l_blk,p_blk);
+
+}
 
 static BOOL32 check_if_exist(UINT32 lpage_addr)
 {
@@ -331,7 +341,7 @@ void ftl_write(UINT32 const lba, UINT32 const total_sectors)
 
 	lpn          = lba / SECTORS_PER_PAGE;
 	sect_offset  = lba % SECTORS_PER_PAGE;
-	remain_sects = num_sectors;
+	remain_sects = total_sectors;
 
 	while (remain_sects != 0)
 	{
@@ -354,8 +364,53 @@ void ftl_write(UINT32 const lba, UINT32 const total_sectors)
 
 static void write_page(UINT32 const lpn, UINT32 const sect_offset, UINT32 const num_sectors)
 {
+	physical_addr p_addr ;
+	p_addr=  get_physical_data_addr(lpn);
+	if(p_addr.blk == NULL) // new write operation
+	{
+		p_addr.blk = get_new_blk();
+		set_physical_addr(lpn,p_addr.blk);
+	}
+	else
+	{
+		p_addr = get_new_log_page();
+	}
+
 
 }
+
+static physical_addr get_new_log_page()
+{ physical_addr p_addr;
+
+	if(log_offset < NUM_LOG_PAGES	)
+	{	 int blk = log_offset / PAGES_PER_BLK ;
+		p_addr.page = log_offset % PAGES_PER_BLK;
+		p_addr.blk  = read_dram_32(LOG_BLKS_MAP_ADDR+sizeof(UINT32) * blk);
+		log_offset++; 
+	}
+	else 
+	{
+		uart_printf("no more free log blokcs "); 
+	} 
+
+	return p_addr ; 
+
+}
+
+
+
+static UINT32 get_new_blk()
+{
+	UINT32 vblock = mem_search_equ_dram(VCOUNT_ADDR + (bank * VBLKS_PER_BANK * sizeof(UINT16)),
+                                sizeof(UINT16),
+                                VBLKS_PER_BANK,
+                                0);
+	if(vblock == NULL)
+		uart_printf("no more blks");
+		for(;;);
+		return vblock ;
+}
+
 
 void ftl_flush(void)
 {
@@ -640,5 +695,6 @@ void showlogs()
 	uart_printf("total pages: %d , data pages %d",NUM_LPAGES ,NUM_DATA_BLKS *PAGES_PER_BLK);
 	uart_printf("NUM_DATA_BLKS: %d",NUM_DATA_BLKS);
 	uart_printf("NUM_LOG_BLKs: %d" , NUM_LOG_BLKS);
+	uart_printf("NUM BLKS %d -- %d",NUM_BLKS,NUM_LOG_BLKS+NUM_DATA_BLKS);
 
 }
